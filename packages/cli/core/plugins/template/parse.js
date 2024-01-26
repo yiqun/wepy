@@ -2,6 +2,16 @@ const htmlparser = require('htmlparser2');
 const tools = require('../../util/tools');
 const modifierRE = /\.[^.]+/g;
 
+// 如果目录下有 transformRules.js 则载入
+fs = require('fs');
+const transformerFile = process.cwd() + '/transformRules.js'
+let transformRules = {}
+fs.exists(transformerFile, exists => {
+  if (exists) {
+    transformRules = require(transformerFile)
+  }
+})
+
 const toAST = html => {
   return new Promise((resolve, reject) => {
     const handler = new htmlparser.DomHandler(
@@ -209,6 +219,18 @@ exports = module.exports = function() {
         }
         if (item.parsedAttr.class || (item.bindClass && item.bindClass.length)) {
           let staticClass = item.parsedAttr.class || '';
+          if (staticClass && Object.keys(transformRules).length > 0) {
+            staticClass = staticClass.split('').map(c => {
+              let nc = c
+              Object.keys(transformRules).forEach(i => {
+                if (c === i) {
+                  nc = transformRules[i]
+                }
+              })
+
+              return nc
+            }).join('')
+          }
           let bindClass = item.bindClass && item.bindClass.length ? ` {{ [ ${item.bindClass.join(',')} ] }}` : '';
           str += ` class="${staticClass + bindClass}"`;
         }
